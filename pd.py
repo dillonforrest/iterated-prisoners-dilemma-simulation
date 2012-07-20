@@ -7,38 +7,57 @@
 import strategies, random
 from pprint import pprint
 from collections import namedtuple
+import plot
+import utils
 
 #constants
-N_AGENTS_ACR = 4; N_AGENTS_DOWN = 4; total_agents = N_AGENTS_ACR * N_AGENTS_DOWN
+N_AGENTS_ACR = N_AGENTS_DOWN = 50
+total_agents = N_AGENTS_ACR * N_AGENTS_DOWN
 IT_PER_ROUND = 10
 win_width = 4 + N_AGENTS_ACR
 win_height = 4 + N_AGENTS_DOWN
-num_strats = len(strategies.strategies)
+num_strats = len(strategies.ALL)
 #payoffs
 MUTUAL_C = 3;     MUTUAL_D = 1
 SCREWER = 5;      SCREWED = 0
 #admin
 TIME0UT_RATE = 100 #milliseconds between frames
+N_ROUNDS = 20000000
 
 iteration_count = 0 # 0 == first iteration of the round of iterations
+rounds_played = 0 
 
-Edge = namedtuple('Edge', ['agent0','agent1','moves'])
+Edge = namedtuple('Edge', ['agent0','agent1','moves0','moves1'])
+
+POINTS = {
+	('C','C'):(MUTUAL_C, MUTUAL_C),
+	('D','D'):(MUTUAL_D, MUTUAL_D),
+	('D','C'): (SCREWER, SCREWED),
+	('C','D'): (SCREWED, SCREWER),
+	}
 
 class Agent():
 	def __init__(self):
-		self.points = int()
-		self.moves = []
-		self.strat = random.randint(0,num_strats-1)
+		self.points = -5
+		self.strat = random.choice(strategies.ALL)
 		self.neighborhood = [self]
-		self.newstrat = self.strat # store new strategy until calculations are done
+		# store new strategy until calculations are done
+		self.newstrat = self.strat
+		
 	def __repr__(self):
-		return 'Agent: %s %s %s' %(self.points, self.strat, len(self.moves))
+		return 'Agent: %s %s' %(self.points, self.strat.__name__,)
+
 	def pickStrat(self):
 		best_neighbor = max(self.neighborhood, key = lambda agent: agent.calcScore())
 		self.newstrat = best_neighbor.strat
+
 	def calcScore(self):
-		denominator =  SCREWER * IT_PER_ROUND * (len(self.neighborhood)-1)
-		return float(self.points) / denominator
+		denominator = SCREWER * IT_PER_ROUND * (len(self.neighborhood)-1)
+		score = float(self.points) / denominator
+		### RANDOMNESS YO
+		return score * utils.rand_between(0.0)
+		### RANDOMNESS YO
+
 	def implementNewStrat(self):
 		self.strat = self.newstrat
 
@@ -60,7 +79,7 @@ def createNetworks(agents):
 			for y in range(vert):
 				agent0 = agents[x][y]
 				agent1 = agents[x+mod_x][y+mod_y]
-				edge = Edge(agent0=agent0, agent1=agent1, moves=[])
+				edge = Edge(agent0=agent0, agent1=agent1, moves0=[], moves1=[])
 				newlist.append(edge)
 				agent0.neighborhood.append(agent1)
 				agent1.neighborhood.append(agent0)
@@ -102,17 +121,18 @@ def oldCreateNetwork(agents):
 '''	
 
 def playPrisonersDilemma(edge):
-		'''one iteration of the prisoner's dilemma between 
-		two neighboring agents -- agents C or D'''
-		agent0, agent1, moves = edge
-		move0, move1 = findMoves(agent0, agent1)
-		points0, points1 = awardPoints(move0, move1)
-		moves.append( (move0,move1) )
-		agent0.points += points0; agent1.points += points1
-
-def playPrisonersDilemma(edge):
-	move0, move1 = findMoves(edge)
-	
+	'''one iteration of the prisoner's dilemma between 
+	two neighboring agents -- agents C or D'''
+	agent0, agent1, moves0, moves1 = edge
+	move0 = agent0.strat(iteration_count, agent0, agent1,
+				moves0, moves1)
+	move1 = agent1.strat(iteration_count, agent1, agent0,
+				moves1, moves0)
+	moves0.append(move0)
+	moves1.append(move1)
+	points0, points1 = POINTS[(move0, move1)]
+	agent0.points += points0
+	agent1.points += points1
 
 def findMoves(agent0, agent1):
 	strat0index = agent0.strat; strat1index = agent1.strat
@@ -121,13 +141,6 @@ def findMoves(agent0, agent1):
 	move1 = strategies.strategies[strat1index](iteration_count=iteration_count,
 		opponent=agent0,player=agent1)
 	return move0, move1
-
-def awardPoints(move0, move1):	
-	if move0 == 'C' and move1 == 'C': return MUTUAL_C, MUTUAL_C
-	elif move0 == 'D' and move1 == 'D': return MUTUAL_D, MUTUAL_D
-	elif move0 == 'D' and move1 == 'C': return SCREWER, SCREWED
-	elif move0 == 'C' and move1 == 'D': return SCREWED, SCREWER
-
 
 class Simulation():	
 	def __init__(self):
@@ -140,22 +153,24 @@ class Simulation():
 					playPrisonersDilemma(edge)
 	def playOneRound(self):
 		global iteration_count
+
 		for iteration_count in range(IT_PER_ROUND):
 			self.playOneIteration()
-		for lineofagents in self.agents:
-			for agent in lineofagents:
-				agent.pickStrat()
-		for lineofagents in self.agents:
-			for agent in lineofagents:
-				agent.points = 0
-				agent.implementNewStrat()
-				# reset all agents' movelists to []
+			
+		flat_list_of_agents = [agent for lineofagents in self.agents for agent in lineofagents]
+		for agent in flat_list_of_agents:
+			agent.pickStrat()
+		plot.plot_agents(self.agents)
+		plot.show()
+		for agent in flat_list_of_agents:
+			agent.points = 0
+			agent.implementNewStrat()
+			# reset all agents' movelists to []
 	
 	def mainLoop(self):
-		while True:
+		global rounds_played
+		for rounds_played in range(N_ROUNDS):
 			self.playOneRound()
-			pprint(self.agents)
-			exit()
 
 if __name__ == '__main__':
 	simulation = Simulation()
