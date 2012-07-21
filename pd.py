@@ -48,7 +48,8 @@ class Agent():
 		return 'Agent: %s %s' %(self.points, self.strat.__name__,)
 
 	def pickStrat(self):
-		best_neighbor = max(self.neighborhood, key = lambda agent: agent.calcScore())
+		best_neighbor = max(self.neighborhood, 
+			key = lambda agent: agent.calcScore())
 		self.newstrat = best_neighbor.strat
 
 	def calcScore(self):
@@ -67,8 +68,10 @@ def createAgents():
 	return agents
 
 def createNetworks(agents):
-	conx_acr = len(agents) - 1; conx_down = len(agents[0]) - 1 # conx = connections
-	hz_network = []; vt_network = []
+	conx_acr = len(agents) - 1; conx_down = len(agents[0]) - 1
+	# conx = connections
+	hz_network = []
+	vt_network = []
 	for network, horiz, vert, mod_x, mod_y in (
 		(hz_network, conx_acr,  N_AGENTS_DOWN, 1, 0),
 		(vt_network, N_AGENTS_ACR,  conx_down, 0, 1),
@@ -100,7 +103,8 @@ def playPrisonersDilemma(edge):
 	agent1.points += points1
 
 def findMoves(agent0, agent1):
-	strat0index = agent0.strat; strat1index = agent1.strat
+	strat0index = agent0.strat
+	strat1index = agent1.strat
 	move0 = strategies.strategies[strat0index](iteration_count=iteration_count,
 		opponent=agent1,player=agent0)
 	move1 = strategies.strategies[strat1index](iteration_count=iteration_count,
@@ -120,20 +124,32 @@ class Simulation():
 		global iteration_count
 		for iteration_count in range(IT_PER_ROUND):
 			self.playOneIteration()
-		flat_list_of_agents = [agent for lineofagents in self.agents for agent in lineofagents]
-		for agent in flat_list_of_agents:
+		self.flat_list_of_agents = [agent for lineofagents in self.agents \
+			for agent in lineofagents]
+		# Agents pick new strategies
+		for agent in self.flat_list_of_agents:
 			agent.pickStrat()
-		plot.plot_agents(self.agents)
+	def printView(self):
+		plot.plotAgents(self.agents)
 		plot.show()
-		for agent in flat_list_of_agents:
+	def prepareNextRound(self):
+		for agent in self.flat_list_of_agents:
 			agent.points = 0
 			agent.implementNewStrat()
-			# reset all agents' movelists to []
+		# Reset moves lists in edges
+		for network in self.networks:
+			for listofedges in network:
+				for edge in listofedges:
+					edge._replace(moves0 = [])
+					edge._replace(moves1 = [])
 	
 	def mainLoop(self):
 		global rounds_played
 		for rounds_played in range(N_ROUNDS):
 			self.playOneRound()
+			self.printView()
+			self.prepareNextRound()
+
 
 if __name__ == '__main__':
 	simulation = Simulation()
