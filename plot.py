@@ -1,6 +1,7 @@
 from pylab import *
 from pprint import pprint
 import strategies
+
 def plotAgents(agents):
     figure(1)
     pprint(agents)
