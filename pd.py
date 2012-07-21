@@ -85,41 +85,6 @@ def createNetworks(agents):
 				agent1.neighborhood.append(agent0)
 	return hz_network, vt_network	
 	
-	
-'''
-	for x in range(conx_acr):
-		newlist = []
-		hz_network.append(newlist)
-		for y in range(N_AGENTS_DOWN):
-			agent0 = agents[x][y]; agent1 = agents[x+1][y]
-			newlist.append( (agent0,agent1) )
-			agent0.neighborhood.append(agent1)
-			agent1.neighborhood.append(agent0)
-	for x in range(N_AGENTS_ACR):
-		newlist = []
-		vt_network.append(newlist)
-		for y in range(conx_down):
-			agent0 = agents[x][y]; agent1 = agents[x][y+1]
-			newlist.append( (agent0,agent1) )
-			agent0.neighborhood.append(agent1)
-			agent1.neighborhood.append(agent0)
-	return hz_network, vt_network
-
-for y in range(N_AGENTS_DOWN):
-		newlist = []
-		hz_network.append(newlist)
-		for x in range(conx_acr):
-			newlist.append( (agents[ )
-def oldCreateNetwork(agents):
-	conx_acr = len(agents) - 1; conx_down = len(agents[0]) - 1 # conx = connections
-	hz_network = [ [ (agents[x][y],agents[x+1][y]) for y in range(N_AGENTS_DOWN) ] \
-		for x in range(conx_acr) ]
-	vt_network = [ [ (agents[x][y],agents[x][y+1]) for y in range(conx_down) ] \
-		for x in range(N_AGENTS_ACR) ]
-	return hz_network, vt_network
-
-'''	
-
 def playPrisonersDilemma(edge):
 	'''one iteration of the prisoner's dilemma between 
 	two neighboring agents -- agents C or D'''
@@ -153,10 +118,8 @@ class Simulation():
 					playPrisonersDilemma(edge)
 	def playOneRound(self):
 		global iteration_count
-
 		for iteration_count in range(IT_PER_ROUND):
 			self.playOneIteration()
-			
 		flat_list_of_agents = [agent for lineofagents in self.agents for agent in lineofagents]
 		for agent in flat_list_of_agents:
 			agent.pickStrat()
