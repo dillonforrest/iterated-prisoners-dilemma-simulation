@@ -7,22 +7,30 @@
 import strategies, random
 from pprint import pprint
 from collections import namedtuple
-import plot
 import utils
+import os
+from path import path
+import pickle
+import plot
+from ddd import make_path
 
 #constants
-N_AGENTS_ACR = N_AGENTS_DOWN = 50
+N_AGENTS_ACR = N_AGENTS_DOWN = 100
 total_agents = N_AGENTS_ACR * N_AGENTS_DOWN
 IT_PER_ROUND = 10
 win_width = 4 + N_AGENTS_ACR
 win_height = 4 + N_AGENTS_DOWN
 num_strats = len(strategies.ALL)
 #payoffs
-MUTUAL_C = 3;     MUTUAL_D = 1
-SCREWER = 5;      SCREWED = 0
+MUTUAL_C = 3
+MUTUAL_D = 1
+SCREWER = 5
+SCREWED = 0
 #admin
 TIME0UT_RATE = 100 #milliseconds between frames
-N_ROUNDS = 20000000
+N_ROUNDS = 500
+
+NEIGHBORS = 4
 
 iteration_count = 0 # 0 == first iteration of the round of iterations
 rounds_played = 0 
@@ -35,28 +43,35 @@ POINTS = {
 	('D','C'): (SCREWER, SCREWED),
 	('C','D'): (SCREWED, SCREWER),
 	}
-
+		
 class Agent():
 	def __init__(self):
 		self.points = -5
-		self.strat = random.choice(strategies.ALL)
+		self.randomStrat()
 		self.neighborhood = [self]
 		# store new strategy until calculations are done
 		self.newstrat = self.strat
+		self.denominator = SCREWER * IT_PER_ROUND * NEIGHBORS
 		
 	def __repr__(self):
 		return 'Agent: %s %s' %(self.points, self.strat.__name__,)
 
+	def randomStrat(self):
+		self.strat = random.choice(strategies.SELECTED)
+
 	def pickStrat(self):
+#		if random.random() >= 1.1:
+#			self.randomStrat()
+#			return
 		best_neighbor = max(self.neighborhood, 
 			key = lambda agent: agent.calcScore())
 		self.newstrat = best_neighbor.strat
 
 	def calcScore(self):
-		denominator = SCREWER * IT_PER_ROUND * (len(self.neighborhood)-1)
-		score = float(self.points) / denominator
+		score = float(self.points) / self.denominator
 		### RANDOMNESS YO
-		return score * utils.rand_between(0.0)
+		#score = score * utils.rand_between(0.9)
+		return score
 		### RANDOMNESS YO
 
 	def implementNewStrat(self):
@@ -112,9 +127,17 @@ def findMoves(agent0, agent1):
 	return move0, move1
 
 class Simulation():	
-	def __init__(self):
+	def __init__(self, figs):
 		self.agents = createAgents()
 		self.networks = createNetworks(self.agents)
+		self.figpath = path(figs)
+		if self.figpath.exists():
+			self.figpath.move(make_path(self.figpath))
+		if not self.figpath.exists():
+			self.figpath.mkdir()
+		for file in self.figpath.files():
+			file.remove()
+		
 	def playOneIteration(self):
 		for network in self.networks:
 			for listofedges in network:
@@ -123,7 +146,9 @@ class Simulation():
 	def playOneRound(self):
 		global iteration_count
 		for iteration_count in range(IT_PER_ROUND):
+			print '.',
 			self.playOneIteration()
+		print
 		self.flat_list_of_agents = [agent for lineofagents in self.agents \
 			for agent in lineofagents]
 		# Agents pick new strategies
@@ -131,7 +156,8 @@ class Simulation():
 			agent.pickStrat()
 	def printView(self):
 		plot.plotAgents(self.agents)
-		plot.show()
+		self.save()
+		
 	def prepareNextRound(self):
 		for agent in self.flat_list_of_agents:
 			agent.points = 0
@@ -142,16 +168,23 @@ class Simulation():
 				for edge in listofedges:
 					edge._replace(moves0 = [])
 					edge._replace(moves1 = [])
+
+	def save(self):
+		plot.savefig(self.figpath.joinpath('%05d.png' % rounds_played))
+
+	def pickle(self):
+		pickle.dump(self.agents, open(self.picklepth.joinpath('%05d.p' % rounds_played),'w'))
 	
 	def mainLoop(self):
 		global rounds_played
 		for rounds_played in range(N_ROUNDS):
+			print 'round', rounds_played
 			self.playOneRound()
 			self.printView()
 			self.prepareNextRound()
 
 
 if __name__ == '__main__':
-	simulation = Simulation()
+	simulation = Simulation('figs')
 	simulation.mainLoop()
 
