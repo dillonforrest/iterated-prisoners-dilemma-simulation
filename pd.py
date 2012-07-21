@@ -2,7 +2,7 @@
 # game theory from here:  http://www.lifl.fr/IPD/ipd.html.en#cipd
 # 17 July 2012
 
-#!/usr/bin/python
+#!/usr/bin/python 
 
 import strategies, random
 from pprint import pprint
